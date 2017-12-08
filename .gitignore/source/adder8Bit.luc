@@ -1,0 +1,24 @@
+module adder8Bit (
+    input a[8], // Input A 8 Bits
+    input b[8], // Inout B 8 Bits
+    input alufn,  // Input ALUFN0, 0 for Addtion and 1 for Subtraction
+    output z, // Z is true if all sum, s=0
+    output v, // V is true if addition operation overflows
+    output n, // N is true if sum, s is negative
+    output s[8],
+    output ao[8]
+       
+  ) {
+  sig xb[8];
+  sig sum[8];
+
+  always {
+    ao = a;
+    xb = b ^ 8x{alufn};
+    sum = a + xb + alufn; // alufn will be 1 to do a subtraction
+    z = ~|sum; // Using a Nor Gate to return true
+    v = (a[7] & xb[7] & ~sum[7]) | (~a[7] & ~xb[7] & sum[7]); // Using formula of v to check for overflow as per Lab #3 P6
+    n = sum[7]; // N returns true only if S7 = 1
+    s = sum;    
+  }
+}

@@ -1,0 +1,25 @@
+module compare8Bit (
+    input alufn[2],
+    input z,
+    input v,
+    input n,
+    output cmp[8]
+  ) {
+    sig lessthan;
+    sig lessequal;
+    
+  always {
+    lessthan=n^v;
+    lessequal=z|(n^v);
+    case(alufn){
+      2b01:
+        cmp=c{7b0,z};
+      2b10:
+        cmp=c{7b0,lessthan};
+      2b11:
+        cmp=c{7b0,lessequal};
+      default:
+        cmp=c{8b0};
+      }
+    }
+}

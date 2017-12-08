@@ -1,0 +1,484 @@
+module finitestatemachine2 (
+    input clk,  // clock
+    input rst,  // reset
+    input b_0,
+    input b_1,    
+    input b_2,
+    input b_3,
+    input b_4,
+    input s,
+    output clock1,
+    output clock2,
+    output clock3,
+    output clock4,
+    output clock5,
+    output clock6,
+    output clock7,
+    output clock8,
+    output bloat1,
+    output bloat2,
+    output bloat3,
+    output bloat4,
+    output bloat5,
+    output io_value[4][4],
+    output out
+  ) {
+    sig storeRst[5];
+    dff store1[3](.clk(clk), . rst(storeRst[0]));
+    dff store2[3](.clk(clk), . rst(storeRst[1]));
+    dff store3[3](.clk(clk), . rst(storeRst[2]));
+    dff store5[3](.clk(clk), . rst(storeRst[4]));
+    dff store4[3](.clk(clk), . rst(storeRst[3]));
+  
+    dff correct1[3](.clk(clk), . rst(rst));
+    dff correct2[3](.clk(clk), . rst(rst));
+    dff correct3[3](.clk(clk), . rst(rst));
+    dff correct4[3](.clk(clk), . rst(rst));
+    dff correct5[3](.clk(clk), . rst(rst));
+    
+    
+  
+    sig button_array[5];
+    sig button;
+    
+    dff bloat[3](.clk(clk), . rst(rst));
+    sig bloat_array[5];
+    dff stage[3](.clk(clk), . rst(rst));
+    alu8Bit alu;
+    sig clockrst[2];
+    
+  
+    dff counter[33](.clk(clk), . rst(clockrst[0]));
+    dff past[1](.clk(clk), . rst(rst));
+    sig clock[4];
+    sig timer30[8];
+    dff timer30bool[1](.clk(clk), . rst(clockrst[1]));
+    .clk(clk) {  
+    .rst(rst) {
+    fsm state(#INIT(WON)) = {TEST2,TEST,B1,B2,B3,B4,B5,TIMER_COUNTER,CMP1,CMP2,CMP3,CMP4,CMP5,GUESS,WRONG,CORRECT,S1_1,S1_0,S2_1,S2_0,S3_1,S3_0,RESET,WON,LOSE};     
+      }    
+    }    
+  always {
+    alu.a= 8b00001;      //SETTING SWITCHES FOR A
+    alu.b= 8b00001;      //SETTING SWITCHES FOR 2B
+    alu.alufn=6b000001;      //SETTING SWITCHES FOR ALUFN
+    //alu.alu;  8bits output      //alu output
+    out = 0;
+    clock = counter.q[14:11]; 
+    timer30=counter.q[32:25];
+    clock1=timer30[0];
+    clock2=timer30[1];
+    clock3=timer30[2];
+    clock4=timer30[3];
+    clock5=timer30[4];
+    clock6=timer30[5];
+    clock7=timer30[6];
+    clock8=timer30[7];
+    counter.d = counter.q + 1; // This will increment the last bit of the counter.q by 1 every clk tick, allowing case to change
+    
+    //***Storing buttons-> Array -> dff -> translate into 3bits input
+    button_array[0]=b_0;
+    button_array[1]=b_1;
+    button_array[2]=b_2;
+    button_array[3]=b_3;
+    button_array[4]=b_4;
+    button=3b000;
+    storeRst=5b00000;
+
+    //***Combination passwords
+    correct1.d=3b001; // set combination passwords
+    correct2.d=3b010;
+    correct3.d=3b011;
+    correct4.d=3b100;
+    correct5.d=3b101;
+    
+    //***Storing Bloatness & Stages
+      //default is zero, via the statmachine bloat increases/decreases
+    // need to change bloat 3bits to change bloat_array
+    bloat_array=5b00000;  //default is zero blaot led light up 
+    if(bloat.q==3b000){bloat_array=5b00000;}
+    else if(bloat.q==3b001){bloat_array=5b00001;}
+    else if(bloat.q==3b010){bloat_array=5b00011;}
+    else if(bloat.q==3b011){bloat_array=5b00111;}
+    else if(bloat.q==3b100){bloat_array=5b01111;}          
+    else if(bloat.q==3b101){bloat_array=5b11111;}
+    
+    bloat1=bloat_array[0];// output bloat led, bloatness number max 5 leds
+    bloat2=bloat_array[1];
+    bloat3=bloat_array[2];
+    bloat4=bloat_array[3];
+    bloat5=bloat_array[4];
+    
+    //7Seg Display
+    io_value = {4d0,4d0,4d0,4d0}; 
+    clockrst=2b0;
+    if(timer30>8b01111000){timer30bool.d=1b1;} //Time for Stage1 1min20 sec                 8b01111000 Manually Timed
+    if(stage.q==3b10){
+      correct1.d=3b101; // set combination passwords
+      correct2.d=3b100;
+      correct3.d=3b011;
+      correct4.d=3b010;
+      correct5.d=3b001;
+      if(timer30>8b01011000){timer30bool.d=1b1;
+   }} //Time for Stage2 1min    8b01011000
+    if(stage.q==3b11){
+    correct1.d=3b001; // set combination passwords
+    correct2.d=3b010;
+    correct3.d=3b011;
+    correct4.d=3b100;
+    correct5.d=3b101;
+      if(timer30>8b00111100){timer30bool.d=1b1;
+    }} //Time for Stage3 40sec   8b00111100
+    state.d = state.q;
+    
+    case (state.q) {      
+      state.WON:
+        //something to signify they won.
+        stage.d=3b1;
+        io_value= {4d9,4d9,4d8,4d7}; // 7seg : uu on 
+        if(button_array==5b11110){state.d=state.RESET;}
+      state.TIMER_COUNTER:
+        storeRst=5b11111;
+      
+        if(timer30bool.q!=1b1){
+        if(button_array==5b00000){
+            state.d=state.B1;
+          }}else{state.d=state.LOSE;}
+      state.B1:
+      io_value= {4d10,4d1,4d12,4d1}; //7seg: S1B1
+      if(stage.q==3b10){io_value= {4d10,4d2,4d12,4d1};}
+      if(stage.q==3b11){io_value= {4d10,4d3,4d12,4d1};}
+       //Storing buttons-> Array -> dff -> translate into 3bits input 
+        if(button_array==5b00001){store1.d=3b001;io_value= {4d1,4d0,4d0,4d0};}
+        else if(button_array==5b00010){store1.d=3b010;io_value= {4d2,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b00100){store1.d=3b011;io_value= {4d3,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b01000){store1.d=3b100;io_value= {4d4,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b10000){store1.d=3b101;io_value= {4d5,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b11110){store1.d=3b111;io_value= {4d6,4d0,4d0,4d0};}
+        case(clock){
+          4b1000:
+        if(store1.q==3b001&&button_array==5b00000){
+          //io_value= {4d11,4d9,4d0,4d10};
+          state.d=state.B2;}
+        if(store1.q==3b010&&button_array==5b00000){
+          //io_value= {4d11,4d9,4d0,4d11};
+          state.d=state.B2;}
+        if(store1.q==3b011&&button_array==5b00000){
+          //io_value= {4d11,4d9,4d0,4d12};
+          state.d=state.B2;}
+        if(store1.q==3b100&&button_array==5b00000){
+          //io_value= {4d11,4d9,4d0,4d13};
+          state.d=state.B2;}  
+        if(store1.q==3b101&&button_array==5b00000){
+          //io_value= {4d11,4d9,4d0,4d14};
+          state.d=state.B2;} }
+        if(timer30bool.q==1b1){state.d=state.LOSE;}        
+             
+      state.B2:
+      io_value= {4d10,4d1,4d12,4d2}; //7seg: S1B2
+      if(stage.q==3b10){io_value= {4d10,4d2,4d12,4d2};}
+      if(stage.q==3b11){io_value= {4d10,4d3,4d12,4d2};}
+        //Storing buttons-> Array -> dff -> translate into 3bits input 
+        if(button_array==5b00001){store2.d=3b001;io_value= {4d1,4d0,4d0,4d0};}
+        else if(button_array==5b00010){store2.d=3b010;io_value= {4d2,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b00100){store2.d=3b011;io_value= {4d3,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b01000){store2.d=3b100;io_value= {4d4,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b10000){store2.d=3b101;io_value= {4d5,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b11110){store2.d=3b111;io_value= {4d6,4d0,4d0,4d0};}
+        case(clock){
+          4b1001:
+        if(store2.q==3b001&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d10};
+          state.d=state.B3;}
+        if(store2.q==3b010&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d11};
+          state.d=state.B3;}
+        if(store2.q==3b011&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d12};
+          state.d=state.B3;}
+        if(store2.q==3b100&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d13};
+          state.d=state.B3;}  
+        if(store2.q==3b101&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d14};
+          state.d=state.B3;}}
+        if(timer30bool.q==1b1){state.d=state.LOSE;}
+      state.B3:
+      io_value= {4d10,4d1,4d12,4d3}; //7seg: S1B3
+      if(stage.q==3b10){io_value= {4d10,4d2,4d12,4d3};}
+      if(stage.q==3b11){io_value= {4d10,4d3,4d12,4d3};}  
+      
+        //Storing buttons-> Array -> dff -> translate into 3bits input 
+        if(button_array==5b00001){store3.d=3b001;io_value= {4d1,4d0,4d0,4d0};}
+        else if(button_array==5b00010){store3.d=3b010;io_value= {4d2,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b00100){store3.d=3b011;io_value= {4d3,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b01000){store3.d=3b100;io_value= {4d4,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b10000){store3.d=3b101;io_value= {4d5,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b11110){store3.d=3b111;io_value= {4d6,4d0,4d0,4d0};}     
+      case(clock){
+          4b1010:
+        if(store3.q==3b001&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d10};
+          state.d=state.B4;}
+        if(store3.q==3b010&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d11};
+          state.d=state.B4;}
+        if(store3.q==3b011&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d12};
+          state.d=state.B4;}
+        if(store3.q==3b100&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d13};
+          state.d=state.B4;}  
+        if(store3.q==3b101&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d14};
+          state.d=state.B4;}}   
+        if(timer30bool.q==1b1){state.d=state.LOSE;}        
+      state.B4:
+        io_value= {4d10,4d1,4d12,4d4}; //7seg: S1B4
+        if(stage.q==3b10){io_value= {4d10,4d2,4d12,4d4};}
+        if(stage.q==3b11){io_value= {4d10,4d3,4d12,4d4};}
+        //Storing buttons-> Array -> dff -> translate into 3bits input 
+        if(button_array==5b00001){store4.d=3b001;io_value= {4d1,4d0,4d0,4d0};}
+        else if(button_array==5b00010){store4.d=3b010;io_value= {4d2,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b00100){store4.d=3b011;io_value= {4d3,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b01000){store4.d=3b100;io_value= {4d4,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b10000){store4.d=3b101;io_value= {4d5,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b11110){store4.d=3b111;io_value= {4d6,4d0,4d0,4d0};}
+       case(clock){
+          4b1001:
+        if(store4.q==3b001&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d10};
+          state.d=state.B5;}
+        if(store4.q==3b010&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d11};
+          state.d=state.B5;}
+        if(store4.q==3b011&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d12};
+          state.d=state.B5;}
+        if(store4.q==3b100&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d13};
+          state.d=state.B5;}  
+        if(store4.q==3b101&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d14};
+          state.d=state.B5;}}
+        if(timer30bool.q==1b1){state.d=state.LOSE;}            
+      state.B5:
+      io_value= {4d10,4d1,4d12,4d5}; //7seg: S1B5
+      if(stage.q==3b10){io_value= {4d10,4d2,4d12,4d5};}
+      if(stage.q==3b11){io_value= {4d10,4d3,4d12,4d5};}
+        
+        //Storing buttons-> Array -> dff -> translate into 3bits input 
+        if(button_array==5b00001){store5.d=3b001;io_value= {4d1,4d0,4d0,4d0};}
+        else if(button_array==5b00010){store5.d=3b010;io_value= {4d2,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b00100){store5.d=3b011;io_value= {4d3,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b01000){store5.d=3b100;io_value= {4d4,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b10000){store5.d=3b101;io_value= {4d5,4d0,4d0,4d0};} //Trouble Shoot: add Led Display to show it can decode ( Button press to 3bits)
+        else if(button_array==5b11110){store5.d=3b111;io_value= {4d6,4d0,4d0,4d0};}
+      case(clock){
+          4b1011:
+          if(store5.q==3b001&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d10};
+          state.d=state.CMP1;}
+        if(store5.q==3b010&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d11};
+          state.d=state.CMP1;}
+        if(store5.q==3b011&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d12};
+          state.d=state.CMP1;}
+        if(store5.q==3b100&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d13};
+          state.d=state.CMP1;}  
+        if(store5.q==3b101&&button_array==5b0){
+          //io_value= {4d11,4d9,4d0,4d14};
+          state.d=state.CMP1;}}
+        if(timer30bool.q==1b1){state.d=state.LOSE;}
+      
+      state.CMP1:
+       bloat.d=3b000;
+       alu.a=bloat.q ;      //SETTING SWITCHES FOR A
+       alu.b=8b01 ;      //SETTING SWITCHES FOR B
+       alu.alufn=6b000000;      //SETTING SWITCHES FOR ALUFN Compare
+             
+       case(clock){
+          4b1000:
+             if(store1.q==correct1.q){ //can use alu cmp or use this  
+              //ALU Add bloat1
+              // io_value= {4d12,4d9,4d0,4d12};
+              state.d=state.CMP2;
+              }else{
+              if(counter.q[1]==1){       
+              bloat.d=alu.alu;
+              state.d=state.CMP2;
+              //io_value= {4d12,4d9,4d0,4d12};
+              }
+          }
+        }
+      state.CMP2:
+       alu.a=bloat.q ;      //SETTING SWITCHES FOR A
+       alu.b=8b01 ;      //SETTING SWITCHES FOR B
+       alu.alufn=6b000000;      //SETTING SWITCHES FOR ALUFN Compare
+             
+       case(clock){
+          4b1000:
+             if(store2.q==correct2.q){ //can use alu cmp or use this  
+              //ALU Add bloat1
+              // io_value= {4d12,4d9,4d0,4d12};
+              state.d=state.CMP3;
+              }else{
+              if(counter.q[1]==1){       
+              bloat.d=alu.alu;
+              state.d=state.CMP3;
+              //io_value= {4d12,4d9,4d0,4d12};
+              }
+          }
+        }
+      state.CMP3:
+      alu.a=bloat.q ;      //SETTING SWITCHES FOR A
+       alu.b=8b01 ;      //SETTING SWITCHES FOR B
+       alu.alufn=6b000000;      //SETTING SWITCHES FOR ALUFN Compare
+             
+       case(clock){
+          4b1000:
+             if(store3.q==correct3.q){ //can use alu cmp or use this  
+              //ALU Add bloat1
+              // io_value= {4d12,4d9,4d0,4d12};
+              state.d=state.CMP4;
+              }else{
+              if(counter.q[1]==1){       
+              bloat.d=alu.alu;
+              state.d=state.CMP4;
+              //io_value= {4d12,4d9,4d0,4d12};
+              }
+          }
+        }
+
+      state.CMP4:
+      alu.a=bloat.q ;      //SETTING SWITCHES FOR A
+       alu.b=8b01 ;      //SETTING SWITCHES FOR B
+       alu.alufn=6b000000;      //SETTING SWITCHES FOR ALUFN Compare
+             
+       case(clock){
+          4b1000:
+             if(store4.q==correct4.q){ //can use alu cmp or use this  
+              //ALU Add bloat1
+              // io_value= {4d12,4d9,4d0,4d12};
+              state.d=state.CMP5;
+              }else{
+              if(counter.q[1]==1){       
+              bloat.d=alu.alu;
+              state.d=state.CMP5;
+              //io_value= {4d12,4d9,4d0,4d12};
+              }
+          }
+        }
+      state.CMP5:
+      alu.a=bloat.q ;      //SETTING SWITCHES FOR A
+       alu.b=8b01 ;      //SETTING SWITCHES FOR B
+       alu.alufn=6b000000;      //SETTING SWITCHES FOR ALUFN Compare
+             
+       case(clock){
+          4b1000:
+             if(store5.q==correct5.q){ //can use alu cmp or use this  
+              //ALU Add bloat1
+              // io_value= {4d12,4d9,4d0,4d12};
+              state.d=state.GUESS;
+              }else{
+              if(counter.q[1]==1){       
+              bloat.d=alu.alu;
+              state.d=state.GUESS;
+              //io_value= {4d12,4d9,4d0,4d12};
+              }
+          }
+        }
+      state.GUESS:
+        //delay
+        //alu.a=8b0 ;      //SETTING SWITCHES FOR A
+        //alu.b=bloat.q;      //SETTING SWITCHES FOR B
+        //alu.alufn=6b11100;      //a<0 compare
+        //To Do: if boat >0 
+        //if(alu.alu!=8b01){
+        if(clock==4b1001){
+        if(bloat.q==3b000){state.d=state.CORRECT;}//state.d = state.CORRECT;}
+        //To DO: else 
+        else{state.d = state.WRONG;}}
+      state.WRONG:
+        io_value= {4d14,4d14,4d14,4d14}; //7seg: 8888
+        if(button_array==5b00001){ //can use alu compare, if input shake sensor in contact  
+            state.d = state.S1_1;}
+      state.S1_1:
+        io_value= {4d12,4d6,4d8,4d1};     //7seg: U1
+        if(button_array==5b00001){ //can use alu compare, if input shake sensor not contact 
+            state.d = state.S1_0;}
+
+      state.S1_0://one shake
+        io_value= {4d12,4d6,4d8,4d8};      //7seg: U0
+           if(button_array==5b00000){
+            state.d = state.S2_1;}
+      state.S2_1:
+        io_value= {4d12,4d6,4d8,4d1};      //7seg: U11
+          if(button_array==5b00001){
+          state.d = state.S2_0;}
+      state.S2_0://two shaked
+        io_value= {4d12,4d6,4d8,4d8};      //7seg: U00
+        if(button_array==5b00000){
+          state.d = state.S3_1;}
+      state.S3_1:
+        io_value= {4d12,4d6,4d8,4d8};      //7seg: U111
+        if(s==1b1){
+        state.d = state.S3_0;}        
+      state.S3_0://third shaked
+        //To Do: ALU.Subtract bloat 3b???
+        io_value= {4d12,4d6,4d8,4d8};      //7seg: U000
+        alu.a=bloat.q ;      //SETTING SWITCHES FOR A
+        alu.b=8b00000001 ;      //SETTING SWITCHES FOR B
+        alu.alufn=6b000001;      //SETTING SWITCHES FOR ALUFN Compare             
+       case(clock){
+          4b1000:
+            if(past.q!=1){
+              if(counter.q[1]==1){       
+              bloat.d=bloat.q-1;
+              past.d=1b1;
+            }}
+          4b1001:
+              if(past.q==1b1){            
+              if(bloat.q==3b0){past.d=1b0;state.d=state.TIMER_COUNTER;}
+              else{past.d=1b0;state.d=state.WRONG;}
+            } }
+        
+      state.TEST:
+        io_value={4d15,4d1,4d1,4d1};
+      state.TEST2:
+        io_value={4d15,4d2,4d2,4d2};    
+        //if(bloat>0)  can use alu.compare
+        //if(bloat.q>8b0){
+        //state.d = state.S1_1;}
+        //else  //got rid of all bloatness
+        //else{
+        //state.d = state.RESET;}         
+      state.CORRECT:
+        //TODO: reset timer
+        clockrst=2b11;
+        io_value= {4d13,4d8,4d0,4d0}; // 7seg : C0
+        if(button_array==5b00001){
+        stage.d=stage.q+1;
+        if(stage.q==3){state.d=state.WON;}else{state.d=state.TIMER_COUNTER;}}
+        //stage+1 might have to use alu cmp
+        //stage=stage+3b01;
+        //if(stage<3b11){
+        //state.d = state.WON;}
+        //else{
+        //state.d = state.RESET;} 
+      state.RESET:
+        io_value= {4d10,4d11,4d12,4d13};// 7seg: sebc
+        //set back to zero
+        clockrst=2b11;
+        //seems like theres nothing to reset, just in case
+        state.d=state.TIMER_COUNTER;
+      state.LOSE:
+        stage.d=3b1;
+        io_value= {4d6,4d8,4d10,4d11}; //7seg: Lose
+        if(button_array==5b11110){state.d=state.RESET;}
+        
+    }
+  }
+}

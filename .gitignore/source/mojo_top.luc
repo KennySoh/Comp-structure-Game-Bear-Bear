@@ -1,0 +1,82 @@
+module mojo_top (
+    input clk,              // 50MHz clock
+    input rst_n,            // reset button (active low)
+    output led [8],         // 8 user controllable LEDs
+    input cclk,             // configuration clock, AVR ready when high
+    output spi_miso,        // AVR SPI MISO
+    input spi_ss,           // AVR SPI Slave Select
+    input spi_mosi,         // AVR SPI MOSI
+    input spi_sck,          // AVR SPI Clock
+    output spi_channel [4], // AVR general purpose pins (used by default to select ADC channel)
+    input avr_tx,           // AVR TX (FPGA RX)
+    output avr_rx,          // AVR RX (FPGA TX)
+    input avr_rx_busy,      // AVR RX buffer full
+    output io_led [3][8],   // LEDs on IO Shield
+    output io_seg [8],      // 7-segment LEDs on IO Shield
+    output io_sel [4],      // Digit select on IO Shield
+    input io_button [5],    // 5 buttons on IO Shield
+    input io_dip [3][8],    // DIP switches on IO Shield
+    input button[5]
+  ) {
+  
+  sig rst;                  // reset signal
+  
+  .clk(clk) {
+    // The reset conditioner is used to synchronize the reset signal to the FPGA
+    // clock. This ensures the entire FPGA comes out of reset at the same time.
+  reset_conditioner reset_cond;
+ 
+  .rst(rst) {
+    multi_seven_seg seg;
+    finitestatemachine2 statemachine;
+  }
+}
+  
+  
+  always {
+    reset_cond.in = ~rst_n; // input raw inverted reset signal
+    rst = reset_cond.out;   // conditioned reset
+    
+    led = 8h00;             // turn LEDs off
+    spi_miso = bz;          // not using SPI
+    spi_channel = bzzzz;    // not using flags
+    avr_rx = bz;            // not using serial port
+    io_led = 3x{{8h00}};    // turn LEDs off
+    seg.values = {4d8,4d8,4d0,4d0};
+    io_seg = ~seg.seg; // connect segments to the driver
+    io_sel = ~seg.sel; // connect digit select to the driver
+    
+    
+    // Buttons
+    statemachine.b_0=io_button[0]; //io_button pressed to simulate the pressing of the btn 1
+    statemachine.b_1=io_button[1];
+    statemachine.b_2=io_button[2];
+    statemachine.b_3=io_button[3];
+    statemachine.b_4=io_button[4];
+    
+    // 
+    seg.values = statemachine.io_value; //display on seven segment led (b1 when btn 1 is pressed etc.)
+    
+    //bloatedness is represented on the led segment
+    io_led[2][0] = statemachine.bloat1;
+    io_led[2][1] = statemachine.bloat2;
+    io_led[2][2] = statemachine.bloat3;
+    io_led[2][3] = statemachine.bloat4;
+    io_led[2][4] = statemachine.bloat5;
+    
+    // Shake Sensor
+    statemachine.s = io_dip[2][0]; 
+    
+    //trouble shoot output Clock 
+    io_led[0][0] = statemachine.clock1;
+    io_led[0][1] = statemachine.clock2;
+    io_led[0][2] = statemachine.clock3;
+    io_led[0][3] = statemachine.clock4;
+    io_led[0][4] = statemachine.clock5;
+    io_led[0][5] = statemachine.clock6;
+    io_led[0][6] = statemachine.clock7;
+    io_led[0][7] = statemachine.clock8;
+    
+      
+  }
+}

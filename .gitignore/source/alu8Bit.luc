@@ -1,0 +1,61 @@
+module alu8Bit (
+    input a[8],
+    input b[8],
+    input alufn[6], //ALUFN[0],ALUFN[1],ALUFN[2],ALUFN[3],ALUFN[4],ALUFN[5]
+    output alu[8]
+  ) {
+  
+  adder8Bit add;
+  boole8Bit bool;
+  shift8Bit shift;
+  compare8Bit cmp;
+  multiplier8Bit mul;
+  
+
+  always {
+    //adder8Bit
+    add.a = a;
+    add.b = b;
+    add.alufn = alufn[0];
+    
+    //boole8Bit
+    bool.a = a;
+    bool.b = b;
+    bool.alufn = alufn[3:0];
+    
+    //shift8Bit
+    shift.a = a;
+    shift.b = b[2:0];
+    shift.alufn = alufn[1:0];
+    
+    //compare8Bit
+    cmp.z = add.z;
+    cmp.v = add.v;
+    cmp.n = add.n;
+    cmp.alufn = alufn[2:1];
+    
+    //multiplier8Bit
+    mul.a = a;
+    mul.b = b;
+    mul.alufn = alufn[0];
+    
+    //The output alu[8] will be dependent on the ALUFN[4] and ALUFN[5]
+    case(alufn[5:4]){
+      2b00:
+      if(alufn[1]){
+        alu = mul.mul;
+        }
+      else {
+        alu = add.s;
+        }
+      2b01:
+      alu = bool.boole;
+      2b10:
+      alu = shift.shift;
+      2b11:
+      alu = cmp.cmp;
+      default:
+      alu = 8x{0};
+    } 
+  }
+}

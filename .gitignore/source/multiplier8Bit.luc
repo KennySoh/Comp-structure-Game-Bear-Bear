@@ -1,0 +1,16 @@
+module multiplier8Bit (
+    input a[8],
+    input b[8],
+    input alufn,  // ALUFN[0]
+    output mul[8]
+  ) {
+
+  always {
+    if (~alufn) {
+      mul = a*b;
+    }
+    else {
+      mul = a/b;
+    }
+  }
+}

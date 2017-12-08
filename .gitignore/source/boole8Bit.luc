@@ -1,0 +1,36 @@
+module boole8Bit (
+    input a[8],
+    input b[8],
+    input alufn[4], // ALUFN[0],ALUFN[1],ALUFN[2],ALUFN[3]
+    output boole[8]
+    
+  ) {
+  
+  always {
+    case(alufn) {
+      4b1000:
+      boole[7:0] = a[7:0] & b[7:0]; //AND Gate
+      4b1110:
+      boole[7:0] = a[7:0] | b[7:0]; //OR Gate
+      4b0110:
+      boole[7:0] = a[7:0] ^ b[7:0]; //XOR Gate
+      4b1010:
+      boole[7:0] = a[7:0]; // a
+      4b1100:
+      boole[7:0] = b[7:0]; //b
+      4b0101:
+      boole[7:0] = ~a[7:0]; // NOT a
+      4b0011:
+      boole[7:0] = ~b[7:0]; // NOT b
+      4b0111:
+      boole[7:0] = ~(a[7:0] & b[7:0]); //NAND Gate
+      4b0001:
+      boole[7:0] = ~(a[7:0] | b[7:0]); //NOR Gate
+      4b1001:
+      boole[7:0] = ~(a[7:0] ^ b[7:0]); //XNOR Gate
+      default:
+      boole[7:0] = 8x{0};      
+  }
+
+}
+}

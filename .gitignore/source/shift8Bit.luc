@@ -1,0 +1,21 @@
+module shift8Bit (
+    input a[8],
+    input b[3], 
+    input alufn[2], // ALUFN[0],ALUFN[1]
+    output shift[8]
+    
+  ) {
+  
+  always {
+    case(alufn) {
+      2b00:
+      shift[7:0] = a[7:0]<<b[2:0]; // Shift Left when ALUFN[1] and ALUFN[0] are 0 and 0 respectively
+      2b01:
+      shift[7:0] = a[7:0]>>b[2:0]; // Shift Right when ALUFN[1] and ALUFN[0] are 0 and 1 respectively
+      2b11:
+      shift[7:0] =  $signed(a)>>>b[2:0]; // Shift Right with sign extension when ALUFN[1] and ALUFN[0] are 1 and 1 respectively
+      default:
+      shift[7:0] = a[7:0];
+    }         
+  }
+}
